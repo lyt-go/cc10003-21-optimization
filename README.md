@@ -59,7 +59,7 @@ npm run dev
 | 漏斗分析 | `funnel` | 漏斗定义 | 漏斗编号、漏斗名称、步骤序列 |
 | 同期群分析 | `cohort` | 同期群定义 | 群组编号、群组名称、划分事件 |
 | 归因模型 | `attribution` | 归因规则 | 规则编号、归因类型、回溯窗口天 |
-| 指标预警 | `alertconfig` | 预警规则 | 预警编号、关联指标、比较运算符 |
+| 指标预警 | `alertconfig` | 预警规则 + 冲突裁决 | 预警编号、关联指标、口径版本、比较运算符、预警级别 |
 | 报表调度 | `reportsch` | 报表任务 | 任务编号、报表名称、包含指标 |
 | 维度属性 | `dimprop` | 维度属性 | 属性编号、维度名称、属性名称 |
 | 多维下钻 | `datadrill` | 下钻路径 | 路径编号、起始维度、下钻层级 |
@@ -67,6 +67,39 @@ npm run dev
 | 标签管理 | `tagmgr` | 标签定义 | 标签编号、标签名称、标签分类 |
 | 洞察推送 | `insight` | 洞察报告 | 报告编号、报告标题、分析主题 |
 | 数据验证 | `dataval` | 验证任务 | 任务编号、验证数据集、验证类型 |
+
+## 指标预警冲突裁决
+
+预警规则必须绑定指标口径版本（`alertconfig.口径版本`），同一指标同一周期只形成一条预警状态。
+裁决引擎在 `backend/app/services/alert_arbitration.py`，相关表均落在内存仓库（`alert_*`）：
+
+| 表 | 含义 |
+| --- | --- |
+| `alert_period` | 指标周期观测值（含口径版本、周期序号、观测值） |
+| `alert_hit` | 命中消费记录，命中即先持久化，后续裁决失败也不丢 |
+| `alert_evaluation` | 规则评估缓存，按「规则 + 周期 + 口径版本 + 规则指纹」复用 |
+| `alert_state` | 每指标每周期唯一预警状态，携带裁决版本、被吸收规则身份、连续周期 |
+| `alert_notification` | 通知清单，与预警状态读取同一裁决版本 |
+| `alert_conflict` | 同级规则同时命中的冲突留痕 |
+
+优先级（确定性字典序）：**预警级别（P1>P2>P3） → 阈值边界严格度（`>`/`<` 优先于 `>=`/`<=`）
+→ 持续周期数（短优先） → 生效时间（早优先） → 规则 id 兜底**。
+
+四类可区分结论：触发、吸收、复用、冲突（另有未命中）。
+口径版本变化时只重评引用该版本的规则，仍引用旧版本的结论继续复用；
+并发修改规则或重复计算同一周期，在 `(指标, 周期)` 分段锁内归并为一份。
+
+主要接口（前缀 `/api/alertconfig`）：
+
+- `POST /arbitration/run` 执行全部周期裁决（`{"force": true}` 强制重裁）
+- `POST /arbitration/periods` 登记周期观测；`GET /arbitration/periods` 查询
+- `POST /arbitration/periods/{metric}/{period}` 单周期裁决
+- `POST /arbitration/reevaluate/{metric}` 口径版本变化后按版本重评
+- `GET /arbitration/states|notifications|conflicts|hits|evaluations|consistency`
+- `POST /{id}/bind-version` 把规则迁移绑定到指标当前口径版本
+- `POST /api/metric/{id}/caliber-version` 指标发布新口径版本（vN → vN+1）
+
+后端测试：`cd backend && .venv/bin/python -m pytest tests/ -q`
 
 ## 约定
 

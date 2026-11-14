@@ -30,6 +30,14 @@ def list_entries(
     return PageResult(items=items, total=total, page=page, size=size)
 
 
+# 固定路径必须声明在 /{entry_id} 之前，否则 export 会当成 entry_id 解析
+@router.get("/export")
+def export_entries() -> dict[str, Any]:
+    """导出指标口径清单：返回当前过滤条件下的全量数据。"""
+    items, total = service.list_entries(page=1, size=10000)
+    return {"module": "metric", "total": total, "items": items}
+
+
 @router.get("/{entry_id}", response_model=dict)
 def get_entry(entry_id: int) -> dict:
     """读取单条指标定义明细；不存在时给出可读的错误说明。"""
@@ -58,8 +66,10 @@ def run_action(entry_id: int, payload: EntryPayload) -> ActionResult:
     return ActionResult(ok=True, message=message, entry=entry)
 
 
-@router.get("/export")
-def export_entries() -> dict[str, Any]:
-    """导出指标口径清单：返回当前过滤条件下的全量数据。"""
-    items, total = service.list_entries(page=1, size=10000)
-    return {"module": "metric", "total": total, "items": items}
+@router.post("/{entry_id}/caliber-version", response_model=ActionResult)
+def bump_caliber_version(entry_id: int) -> ActionResult:
+    """发布新口径版本（vN -> vN+1）；预警规则是否跟随迁移由预警侧显式绑定决定。"""
+    entry, message = service.bump_caliber_version(entry_id)
+    if entry is None:
+        return ActionResult(ok=False, message=message)
+    return ActionResult(ok=True, message=message, entry=entry)

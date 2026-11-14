@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.routers import ROUTERS
+from app.services.alert_arbitration import engine
 from app.store import store
 
 app = FastAPI(title="指标口径与分析实验平台", version="1.0.0")
@@ -24,6 +25,15 @@ app.add_middleware(
 
 for module in ROUTERS:
     app.include_router(module.router)
+
+
+@app.on_event("startup")
+def bootstrap_alert_arbitration() -> None:
+    """启动时对种子周期做一次裁决，保证页面首次加载就能看到预警状态与通知。
+
+    幂等：已有裁决结果的周期会直接复用，不会重复发通知。
+    """
+    engine.run_all(force=False)
 
 
 @app.get("/api/health")

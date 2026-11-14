@@ -33,3 +33,22 @@ body { margin: 0; background: #f6f8fb; color: #1f2937; }
 .link { border: none; background: none; color: var(--brand); cursor: pointer; padding: 0; }
 .page-foot { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--muted); }
 .error-text { color: #b42318; }
+
+/* 预警裁决面板 */
+.tab-bar { display: flex; gap: 8px; margin: 12px 0; }
+.tab-btn { border: 1px solid var(--border); background: #fff; border-radius: 6px; padding: 6px 14px; cursor: pointer; font-size: 13px; }
+.tab-btn.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+.panel { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; }
+.panel-title { font-size: 14px; font-weight: 600; margin: 0 0 8px; }
+.badge { display: inline-block; border-radius: 10px; padding: 1px 8px; font-size: 12px; line-height: 18px; }
+.badge-trigger { background: #fee4e2; color: #b42318; }
+.badge-absorbed { background: #fef3c7; color: #92400e; }
+.badge-reused { background: #e0e7ff; color: #3730a3; }
+.badge-conflict { background: #ffedd5; color: #c2410c; }
+.badge-normal { background: #f1f5f9; color: #475569; }
+.badge-warn { background: #fee4e2; color: #b42318; }
+.badge-ok { background: #dcfce7; color: #166534; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--muted); }
+.sub-list { margin: 4px 0 0; padding-left: 16px; font-size: 12px; color: var(--muted); }
+.sub-list li { margin-bottom: 2px; }
+.toolbar { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }

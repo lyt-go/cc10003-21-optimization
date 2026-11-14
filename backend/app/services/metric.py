@@ -11,7 +11,6 @@ STATUS_ORDER = ["草稿", "口径评审中", "已发布", "已下线"]
 ACTION_RULES = {"提交口径评审": "口径评审中", "发布指标": "已发布", "下线指标": "已下线"}
 NEGATIVE_ACTIONS = ["下线指标"]
 
-
 class MetricService:
     def list_entries(
         self,
@@ -59,3 +58,17 @@ class MetricService:
         entry["pending"] = target != STATUS_ORDER[-1]
         entry["abnormal"] = action in NEGATIVE_ACTIONS
         return entry, f"指标定义已{action}"
+
+    def bump_caliber_version(self, entry_id: int) -> tuple[dict[str, Any] | None, str]:
+        """发布新口径版本：vN -> v(N+1)。引用旧版本的预警规则不会被静默改写。"""
+        with store.lock:
+            entry = store.find(MODULE, entry_id)
+            if entry is None:
+                return None, f"指标定义 {entry_id} 不存在或已归档"
+            current = str(entry.get("口径版本") or "v0")
+            try:
+                serial = int(current.removeprefix("v")) + 1
+            except ValueError:
+                serial = 1
+            entry["口径版本"] = f"v{serial}"
+            return entry, f"指标 {entry.get('指标编号')} 口径版本已升级为 v{serial}"
